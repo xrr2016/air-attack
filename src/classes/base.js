@@ -13,8 +13,8 @@ Base._opts = {
   y: 0,
   vx: 0,
   vy: 0,
-  width: 100,
-  height: 100,
+  width: 50,
+  height: 50,
   color: 'blue'
 }
 
