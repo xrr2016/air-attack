@@ -8,16 +8,22 @@ class Player extends Base {
     this.newX = this.x
     this.newY = this.y
     this.isMoving = false
-    this.isShouldMove = false
+    this.movePath = false
     this.speed = opts.speed
+    this.destinations = []
   }
 
   render () {
-    if (this.isShouldMove) {
+    if (this.isMoving) {
       this.showDash()
-      this.move()
+      this.showFlame()
     }
 
+    if (this.destinations.length) {
+      this.showDash()
+    }
+
+    this.move()
     this.context.save()
     this.context.translate(this.x, this.y)
     this.context.rotate(this.rotation)
@@ -30,25 +36,41 @@ class Player extends Base {
     this.context.lineTo(-this.width + 2, this.height + 2)
     this.context.closePath()
     this.context.fill()
-
-    if (this.isMoving) {
-      this.showFlame()
-    }
-
     this.context.restore()
     this.stop()
   }
 
   showDash () {
     this.context.save()
-    this.context.beginPath()
     this.context.lineWidth = 0.5
-    this.context.strokeStyle = this.color
+    this.context.strokeStyle = '#666'
+    this.context.fillStyle = '#666'
     this.context.setLineDash([5, 10])
-    this.context.moveTo(this.x, this.y)
-    this.context.lineTo(this.newX, this.newY)
-    this.context.arc(this.newX, this.newY, 4, 0, Math.PI * 2)
-    this.context.stroke()
+
+    if (this.destinations.length) {
+      const dests = this.destinations
+      this.context.moveTo(this.x, this.y)
+      this.context.lineTo(dests[0].x, dests[0].y)
+      this.context.stroke()
+      this.context.beginPath()
+      this.context.arc(dests[0].x, dests[0].y, 3, 0, Math.PI * 2)
+      this.context.fill()
+
+      for (let index = 0; index < dests.length - 1; index++) {
+        this.context.beginPath()
+        this.context.moveTo(dests[index].x, dests[index].y)
+        this.context.lineTo(dests[index + 1].x, dests[index + 1].y)
+        this.context.stroke()
+        this.context.beginPath()
+        this.context.arc(dests[index + 1].x, dests[index + 1].y, 3, 0, Math.PI * 2)
+        this.context.fill()
+      }
+    } else {
+      this.context.beginPath()
+      this.context.moveTo(this.x, this.y)
+      this.context.lineTo(this.newX, this.newY)
+      this.context.stroke()
+    }
     this.context.restore()
   }
 
@@ -61,17 +83,14 @@ class Player extends Base {
   }
 
   move () {
-    const dx = this.newX - this.x
-    const dy = this.newY - this.y
-    const distance = Math.sqrt(dx * dx, dy * dy)
-    const moveTime = distance / this.speed
-
-    this.vx = dx / moveTime
-    this.vy = dy / moveTime
-
-    this.x += this.vx
-    this.y += this.vy
-    this.isMoving = true
+    if (this.movePath && this.destinations.length) {
+      const dests = this.destinations
+      this.x += this.vx
+      this.y += this.vy
+    } else {
+      this.x += this.vx
+      this.y += this.vy
+    }
   }
 
   stop () {
@@ -81,28 +100,76 @@ class Player extends Base {
       (this.vy > 0 && this.y >= this.newY) ||
       (this.vy < 0 && this.y <= this.newY)
     ) {
-      this.isShouldMove = false
-      this.isMoving = false
       this.x = this.newX
       this.y = this.newY
+      this.isMoving = false
     }
   }
 
   bindEvent () {
-    this.canvas.addEventListener('click', event => {
-      const { offsetX, offsetY } = event
-      this.newX = offsetX
-      this.newY = offsetY
-      this.isShouldMove = true
-      this.move()
-    })
+    this.canvas.addEventListener(
+      'click',
+      event => {
+        const speed = this.speed
+        const { offsetX, offsetY } = event
 
-    this.canvas.addEventListener('mousemove', event => {
-      const { offsetX, offsetY } = event
-      const dx = offsetX - this.x
-      const dy = offsetY - this.y
-      this.rotation = Math.atan2(dy, dx) + Math.PI / 2
-    })
+        this.newX = offsetX
+        this.newY = offsetY
+        const dx = offsetX - this.x
+        const dy = offsetY - this.y
+        const angle = Math.atan2(dy, dx)
+        this.vx = speed * Math.cos(angle)
+        this.vy = speed * Math.sin(angle)
+        this.isMoving = true
+      },
+      false
+    )
+
+    this.canvas.addEventListener(
+      'contextmenu',
+      event => {
+        event.preventDefault()
+
+        const speed = this.speed
+        const { offsetX, offsetY } = event
+        const dx = offsetX - this.x
+        const dy = offsetY - this.y
+        const angle = Math.atan2(dy, dx)
+        const dist = Math.sqrt(dx * dx, dy * dy)
+        const spend = dist / speed
+
+        this.destinations.push({
+          speed,
+          x: offsetX,
+          y: offsetY,
+          angle: Math.atan2(dy, dx),
+          vx: speed * Math.cos(angle),
+          vy: speed * Math.sin(angle)
+        })
+      },
+      false
+    )
+
+    this.canvas.addEventListener(
+      'mousemove',
+      event => {
+        const { offsetX, offsetY } = event
+        const dx = offsetX - this.x
+        const dy = offsetY - this.y
+        this.rotation = Math.atan2(dy, dx) + Math.PI / 2
+      },
+      false
+    )
+
+    document.addEventListener(
+      'keypress',
+      event => {
+        if (event.key === 'Enter') {
+          this.movePath = true
+        }
+      },
+      false
+    )
   }
 }
 

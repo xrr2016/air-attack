@@ -9,8 +9,6 @@ const game = newGame()
 const playerOpts = {
   x: game.width / 2,
   y: game.height - 40,
-  vx: 1,
-  vy: 1,
   width: 15,
   height: 15,
   speed: 4,
